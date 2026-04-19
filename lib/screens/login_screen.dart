@@ -40,10 +40,11 @@ class _LoginScreenState extends State<LoginScreen> {
         );
         return;
       }
+      if (!mounted) return;
 
       //обычная логика
       await _api.connect(_serverUrl);
-      if (!mounted) return;
+      if (!mounted || _api.isMockMode) return;
       
       if (!_api.isConnected) {
         throw Exception('Нет связи с сервером');
@@ -61,9 +62,9 @@ class _LoginScreenState extends State<LoginScreen> {
         _showError('Ошибка авторизации');
       }
     } catch (e) {
-      if (mounted) _showError('Ошибка: ${e.toString().replaceAll('Exception: ', '')}');
+      if (mounted && !_api.isMockMode) _showError('Ошибка: ${e.toString().replaceAll('Exception: ', '')}');
     } finally {
-      if (mounted) setState(() => _isLoading = false);
+      if (mounted && !_api.isMockMode) setState(() => _isLoading = false);
     }
   }
 

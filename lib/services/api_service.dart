@@ -8,17 +8,38 @@ class ApiService {
   ApiService._internal();
 
   IOWebSocketChannel? _channel;
+  bool _isConnecting = false;
   bool isConnected = false;
   bool _isMockMode = false;
+  bool get isMockMode => _isMockMode;
   
   final List<Function(Map<String, dynamic>)> _listeners = [];
   Completer<bool>? _loginCompleter;
 
   void addListener(Function(Map<String, dynamic>) callback) => _listeners.add(callback);
-  void setMockMode(bool enabled) => _isMockMode = enabled;
+  void setMockMode(bool enabled) {
+    _isMockMode = enabled;
+    if (enabled) {
+    try { _channel?.sink.close(); } catch (_) {}
+    _channel = null;
+    isConnected = false;
+    _isConnecting = false;
+    if (_loginCompleter != null && !_loginCompleter!.isCompleted) {
+      _loginCompleter!.complete(false);
+    }
+  }}
 
   Future<void> connect(String url) async {
     if (_isMockMode) return;
+
+    if (_isConnecting) {
+    try { _channel?.sink.close(); } catch (_) {}
+    _channel = null;
+    isConnected = false;
+  }
+  _isConnecting = true;
+
+
     try {
       _channel = IOWebSocketChannel.connect(url);
       isConnected = true;
@@ -38,6 +59,7 @@ class ApiService {
             for (var l in _listeners) {
               try { l(json); } catch (_) {}
             }
+            _isConnecting = false;
           } catch (_) { /* игнор битой jsonки */ }
         },
         onDone: () {
@@ -48,6 +70,7 @@ class ApiService {
           }
         },
         onError: (err) {
+          if (_isMockMode) return;
           isConnected = false;
           print("⚠️ WS Error: $err");
           if (_loginCompleter != null && !_loginCompleter!.isCompleted) {
@@ -57,6 +80,7 @@ class ApiService {
         cancelOnError: true, 
       );
     } catch (e) {
+      _isConnecting = false;
       print("❌ Connect failed: $e");
       isConnected = false;
     }

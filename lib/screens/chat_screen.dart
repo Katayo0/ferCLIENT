@@ -89,14 +89,24 @@ class _ChatScreenState extends State<ChatScreen> {
 
   @override
   Widget build(BuildContext context) {
+    // Делим контакты на группы
+    final onlineContacts = contacts.where((c) => c.isOnline).toList();
+    final offlineContacts = contacts.where((c) => !c.isOnline).toList();
+
     return Scaffold(
       backgroundColor: const Color(0xFF121212),
+      resizeToAvoidBottomInset: false,
       body: Row(
         children: [
-          SizedBox(
+          // ================= ЛЕВАЯ ПАНЕЛЬ =================
+          Container(
             width: 260,
+            decoration: BoxDecoration(
+              border: Border(right: BorderSide(color: Colors.grey.shade800, width: 1)),
+            ),
             child: Column(
               children: [
+                // Хедер профиля
                 Padding(
                   padding: const EdgeInsets.all(10),
                   child: Row(
@@ -104,23 +114,15 @@ class _ChatScreenState extends State<ChatScreen> {
                       Expanded(
                         child: Text(
                           'FER | ${widget.myLogin}',
-                          style: const TextStyle(
-                            color: Colors.teal,
-                            fontWeight: FontWeight.bold,
-                          ),
-                          overflow: TextOverflow
-                              .ellipsis, 
-                          maxLines: 1,
+                          style: const TextStyle(color: Colors.teal, fontWeight: FontWeight.bold),
+                          overflow: TextOverflow.ellipsis,
                         ),
                       ),
                       if (widget.isMockMode)
                         const Padding(
                           padding: EdgeInsets.only(left: 8),
                           child: Chip(
-                            label: Text(
-                              '🧪 MOCK',
-                              style: TextStyle(fontSize: 10),
-                            ),
+                            label: Text('🧪 MOCK', style: TextStyle(fontSize: 10)),
                             backgroundColor: Colors.orange,
                             padding: EdgeInsets.zero,
                             visualDensity: VisualDensity.compact,
@@ -129,34 +131,39 @@ class _ChatScreenState extends State<ChatScreen> {
                     ],
                   ),
                 ),
+                
+                // Список контактов с группировкой
                 Expanded(
-                  child: contacts.isEmpty
-                      ? const Center(child: CircularProgressIndicator())
-                      : ListView.builder(
-                          itemCount: contacts.length,
-                          itemBuilder: (ctx, i) {
-                            final c = contacts[i];
-                            final isSelected = selectedContact?.id == c.id;
-                            return ListTile(
-                              selected: isSelected,
-                              selectedTileColor: const Color(0xFF2C3E50),
-                              title: Text(
-                                c.name,
-                                style: TextStyle(
-                                  color: c.isOnline
-                                      ? Colors.white
-                                      : Colors.grey,
-                                ),
-                              ),
-                              leading: CircleAvatar(child: Text(c.name[0])),
-                              onTap: () => setState(() => selectedContact = c),
-                            );
-                          },
+                  child: ListView(
+                    padding: EdgeInsets.zero,
+                    children: [
+                      // Группа: В сети
+                      if (onlineContacts.isNotEmpty) ...[
+                        _buildGroupHeader('В сети (${onlineContacts.length})'),
+                        ...onlineContacts.map((c) => _buildContactTile(c)).toList(),
+                      ],
+                      
+                      // Группа: Не в сети
+                      if (offlineContacts.isNotEmpty) ...[
+                        _buildGroupHeader('Не в сети (${offlineContacts.length})'),
+                        ...offlineContacts.map((c) => _buildContactTile(c)).toList(),
+                      ],
+                      
+                      // Пустое состояние
+                      if (contacts.isEmpty)
+                        const Center(
+                          child: Padding(
+                            padding: EdgeInsets.all(20.0),
+                            child: Text('Контакты пусты', style: TextStyle(color: Colors.grey)),
+                          ),
                         ),
+                    ],
+                  ),
                 ),
               ],
             ),
           ),
+
           Expanded(
             child: selectedContact == null
                 ? const Center(
@@ -240,6 +247,59 @@ class _ChatScreenState extends State<ChatScreen> {
           ),
         ],
       ),
+    );
+  }
+  Widget _buildGroupHeader(String title) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      color: const Color(0xFF181818),
+      child: Text(
+        title,
+        style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.grey[500]),
+      ),
+    );
+  }
+
+  Widget _buildContactTile(Contact c) {
+    final isSelected = selectedContact?.id == c.id;
+    return ListTile(
+      selected: isSelected,
+      selectedTileColor: const Color(0xFF2C3E50),
+      leading: Stack(
+        children: [
+          CircleAvatar(
+            radius: 18,
+            backgroundColor: c.isOnline ? Colors.blueGrey : Colors.grey[800],
+            child: Text(c.name[0], style: const TextStyle(fontSize: 16)),
+          ),
+          Positioned(
+            bottom: 0, right: 0,
+            child: Container(
+              width: 10, height: 10,
+              decoration: BoxDecoration(
+                color: c.isOnline ? Colors.green : Colors.red,
+                shape: BoxShape.circle,
+                border: Border.all(color: const Color(0xFF121212), width: 2),
+              ),
+            ),
+          ),
+        ],
+      ),
+      title: Text(
+        c.name,
+        style: TextStyle(
+          fontSize: 13,
+          fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+          color: isSelected ? Colors.white : Colors.grey[300],
+        ),
+      ),
+      subtitle: Text(
+        c.isOnline ? 'Онлайн' : 'Оффлайн',
+        style: TextStyle(fontSize: 11, color: c.isOnline ? Colors.green[400] : Colors.grey[600]),
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+      ),
+      onTap: () => setState(() => selectedContact = c),
     );
   }
 }
