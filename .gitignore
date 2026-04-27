@@ -46,3 +46,4 @@ app.*.map.json
 
 # moyo gavno
 /lib/main_bckp.dart
+/.vscode/
